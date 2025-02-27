@@ -131,14 +131,18 @@ class SchemaEditor:
     def create_graph(self):
         """
         Очищает холст и отрисовывает узлы и ребра по матрице смежности.
+        Для неориентированного графа обрабатываем только одну половину матрицы (условие j > i),
+        чтобы каждое ребро рисовалось ровно один раз.
         """
         self.canvas.delete("all")
         for node in self.nodes.values():
             self.add_node(node)
         for i, row in enumerate(self.adjacency_matrix):
             for j, weight in enumerate(row):
-                if weight > 0 and (i + 1) in self.nodes and (j + 1) in self.nodes:
-                    self.create_edge_from_matrix(self.nodes[i + 1], self.nodes[j + 1], weight)
+                # Обрабатываем ребро только если j > i (т.е. только одну половину матрицы)
+                if j > i and weight > 0:
+                    if (i + 1) in self.nodes and (j + 1) in self.nodes:
+                        self.create_edge_from_matrix(self.nodes[i + 1], self.nodes[j + 1], weight)
         self.canvas.configure(scrollregion=self.canvas.bbox("all"))
 
     def set_adjacency_matrix(self, new_matrix):
@@ -154,10 +158,11 @@ class SchemaEditor:
 
     def set_graph(self, schema_data):
         """
-        Устанавливает данные схемы и перерисовывает её.
+        Устанавливает данные схемы из объекта SchemaData и перерисовывает всю схему.
+        Очищает список ребер перед отрисовкой, чтобы не было дублирования объектов.
 
         Args:
-            schema_data (SchemaData): Данные схемы.
+            schema_data (SchemaData): Объект с данными схемы.
         """
         self.nodes = schema_data.nodes
         self.adjacency_matrix = schema_data.adjacency_matrix
@@ -373,24 +378,23 @@ class SchemaEditor:
         """
         Обрабатывает двойной клик ЛКМ по холсту.
         Если клик происходит вблизи линии ребра (с допуском TOL_dbl),
-        перемещает текст с весом ребра (label) в точку клика.
-
-        Args:
-            event: Событие двойного клика Tkinter.
+        перемещает метку с весом ребра в точку клика и обновляет её цвет,
+        чтобы он соответствовал текущему цвету ребра.
         """
         px = self.canvas.canvasx(event.x)
         py = self.canvas.canvasy(event.y)
-        TOL_dbl = 10  # Допуск для определения попадания по ребру при двойном клике
-        for (edge_obj, text_obj, node1, node2, weight) in self.edges:
-            # Вычисляем точки на границах узлов для текущего ребра
+        TOL_dbl = 15  # Допуск для определения попадания по ребру
+        for edge_obj, text_obj, node1, node2, weight in self.edges:
             x1, y1 = self.get_closest_edge_position(self.nodes[node1], self.nodes[node2])
             x2, y2 = self.get_closest_edge_position(self.nodes[node2], self.nodes[node1])
-            # Вычисляем расстояние от точки клика до отрезка ребра
             dist = self.dist_point_segment(px, py, x1, y1, x2, y2)
             if dist <= TOL_dbl:
-                # Если точка клика достаточно близко, перемещаем текст с весом в эту точку
+                # Получаем текущий цвет линии
+                current_color = self.canvas.itemcget(edge_obj, "fill")
+                # Обновляем цвет метки, чтобы он соответствовал цвету линии
+                self.canvas.itemconfig(text_obj, fill=current_color)
+                # Перемещаем метку в точку клика
                 self.canvas.coords(text_obj, px, py)
-                # Обновляем сохраненную позицию текста в словаре edge_positions
                 self.edge_positions[(node1, node2)] = (px, py)
                 break
 
