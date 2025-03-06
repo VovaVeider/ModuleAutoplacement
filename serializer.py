@@ -1,34 +1,55 @@
-"""
-serializer.py
-Модуль для сериализации (сохранения) и десериализации (загрузки) схемы.
-"""
-
 import json
 from tkinter import messagebox
-from typing import Dict, Optional, Any
+from typing import Dict, Optional
+
 from models import Node, SchemaData
+
 
 class SchemaSerializer:
     """
-    Инкапсулирует логику сохранения и загрузки схемы в формате JSON.
+    SchemaSerializer инкапсулирует логику сохранения и загрузки схемы в формате JSON.
     """
     @staticmethod
     def serialize(schema_data: SchemaData, filename: str) -> None:
         try:
+            # Формируем словарь узлов
             nodes_data: Dict[str, Dict[str, int]] = {}
             for node in schema_data.nodes.values():
                 nodes_data[str(node.element_number)] = {
                     "element_number": node.element_number,
                     "grid_position": node.grid_position
                 }
-            data: Dict[str, Any] = {
-                "cols": schema_data.cols,
-                "rows": schema_data.rows,
-                "nodes": nodes_data,
-                "adjacency_matrix": schema_data.adjacency_matrix
-            }
+            # Получаем матрицу смежности
+            matrix = schema_data.adjacency_matrix
+            formatted_matrix: str = ""
+            if matrix:
+                # Определяем число столбцов (предполагаем, что все строки одинаковой длины)
+                num_cols = len(matrix[0])
+                # Вычисляем ширину для каждого столбца как максимальную длину числа в этом столбце
+                col_widths = [
+                    max(len(str(row[i])) for row in matrix)
+                    for i in range(num_cols)
+                ]
+                # Форматируем каждую строку матрицы с выравниванием по столбцам
+                formatted_rows = []
+                for row in matrix:
+                    formatted_row = "[ " + ", ".join(
+                        str(num).rjust(col_widths[i]) for i, num in enumerate(row)
+                    ) + " ]"
+                    formatted_rows.append(formatted_row)
+                # Собираем итоговую строку с отступами
+                formatted_matrix = "[\n    " + ",\n    ".join(formatted_rows) + "\n]"
+            # Форматируем узлы с помощью json.dumps для аккуратного вывода
+            nodes_json: str = json.dumps(nodes_data, indent=4, ensure_ascii=False)
+            # Собираем итоговый JSON-вывод вручную, вставляя отформатированную матрицу
+            final_json: str = "{\n"
+            final_json += f'    "cols": {schema_data.cols},\n'
+            final_json += f'    "rows": {schema_data.rows},\n'
+            final_json += f'    "nodes": {nodes_json},\n'
+            final_json += '    "adjacency_matrix": ' + formatted_matrix + "\n"
+            final_json += "}"
             with open(filename, "w", encoding="utf-8") as f:
-                json.dump(data, f, ensure_ascii=False, indent=4)
+                f.write(final_json)
         except Exception as e:
             messagebox.showerror("Ошибка", f"Не удалось сохранить файл:\n{e}")
 

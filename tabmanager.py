@@ -4,9 +4,10 @@ tabmanager.py
 """
 
 import tkinter as tk
-from tkinter import simpledialog
+from tkinter import simpledialog, messagebox
 from tkinter import ttk
-from typing import Dict, Optional
+from typing import Dict, Optional, List
+
 from editor import SchemaEditor
 from models import Node, SchemaData
 
@@ -37,12 +38,6 @@ class TabManager:
         self.notebook.bind("<Button-3>", self.on_tab_right_click)
 
     def create_new_tab(self, initial: bool = False) -> Optional[tk.Frame]:
-        """
-        Создает новую вкладку. Если initial=True, имя вкладки "безымянный", иначе запрашивается у пользователя.
-
-        Returns:
-            Optional[tk.Frame]: Фрейм вкладки или None, если ввод отменён.
-        """
         if initial:
             tab_name: str = "безымянный"
         else:
@@ -55,9 +50,32 @@ class TabManager:
         num_nodes: int = cols * rows
         nodes: Dict[int, Node] = {i + 1: Node(i + 1, i + 1) for i in range(num_nodes)}
         adjacency_matrix = [[0] * num_nodes for _ in range(num_nodes)]
-        schema_data = SchemaData(nodes, adjacency_matrix, cols, rows)
+        schema_data: SchemaData = SchemaData(nodes, adjacency_matrix, cols, rows)
         editor: SchemaEditor = SchemaEditor(frame, schema_data=schema_data)
-        self.notebook.add(frame, text=tab_name)
+        # Если вкладка "+" уже существует, вставляем новую вкладку перед ней
+        if self.plus_tab_id is not None:
+            index = self.notebook.index(self.plus_tab_id)
+            self.notebook.insert(index, frame, text=tab_name)
+        else:
+            self.notebook.add(frame, text=tab_name)
+        self.tabs[str(frame)] = editor
+        return frame
+
+    def create_new_tab_with_name(self, tab_name: str) -> tk.Frame:
+        frame: tk.Frame = tk.Frame(self.notebook)
+        cols: int = 3
+        rows: int = 3
+        num_nodes: int = cols * rows
+        nodes: Dict[int, Node] = {i + 1: Node(i + 1, i + 1) for i in range(num_nodes)}
+        adjacency_matrix = [[0] * num_nodes for _ in range(num_nodes)]
+        schema_data: SchemaData = SchemaData(nodes, adjacency_matrix, cols, rows)
+        editor: SchemaEditor = SchemaEditor(frame, schema_data=schema_data)
+        # Вставляем новую вкладку перед вкладкой "+"
+        if self.plus_tab_id is not None:
+            index = self.notebook.index(self.plus_tab_id)
+            self.notebook.insert(index, frame, text=tab_name)
+        else:
+            self.notebook.add(frame, text=tab_name)
         self.tabs[str(frame)] = editor
         return frame
 
@@ -95,28 +113,6 @@ class TabManager:
             self.notebook.select(new_tab)
             self.last_tab = str(new_tab)
         self.add_plus_tab()
-
-    def create_new_tab_with_name(self, tab_name: str) -> tk.Frame:
-        """
-        Создает новую вкладку с заданным именем.
-
-        Args:
-            tab_name (str): Имя вкладки.
-
-        Returns:
-            tk.Frame: Фрейм вкладки.
-        """
-        frame: tk.Frame = tk.Frame(self.notebook)
-        cols: int = 3
-        rows: int = 3
-        num_nodes: int = cols * rows
-        nodes: Dict[int, Node] = {i + 1: Node(i + 1, i + 1) for i in range(num_nodes)}
-        adjacency_matrix = [[0] * num_nodes for _ in range(num_nodes)]
-        schema_data = SchemaData(nodes, adjacency_matrix, cols, rows)
-        editor: SchemaEditor = SchemaEditor(frame, schema_data=schema_data)
-        self.notebook.add(frame, text=tab_name)
-        self.tabs[str(frame)] = editor
-        return frame
 
     def on_tab_right_click(self, event: tk.Event) -> None:
         """
@@ -172,3 +168,8 @@ class TabManager:
         if current_tab in self.tabs:
             return self.tabs[current_tab]
         return None
+
+    def get_current_tab_name(self) -> str:
+        current_tab = self.notebook.select()
+        tab_name = self.notebook.tab(current_tab, "text")
+        return tab_name

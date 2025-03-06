@@ -3,10 +3,12 @@ editor.py
 Модуль, содержащий класс SchemaEditor, отвечающий за отрисовку схемы на холсте и обработку событий.
 """
 
-import tkinter as tk
 import math
 import random
+import tkinter as tk
+from tkinter import simpledialog, messagebox
 from typing import Dict, List, Optional, Tuple
+
 from models import Node, SchemaData
 
 

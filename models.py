@@ -3,7 +3,8 @@ Models.py
 Модуль, содержащий классы данных для схемы.
 """
 
-from typing import Dict
+from typing import Dict, List
+
 
 class Node:
     """
@@ -20,16 +21,32 @@ class Node:
 
 class SchemaData:
     """
-    SchemaData хранит данные схемы: узлы, матрица связей и размеры сетки.
-
-    Attributes:
-        nodes (Dict[int, Node]): Словарь узлов, где ключ – element_number.
-        adjacency_matrix (List[List[int]]): Матрица смежности (строки соответствуют узлам с element_number - 1).
-        cols (int): Количество колонок в сетке.
-        rows (int): Количество строк в сетке.
+    Класс SchemaData хранит данные схемы:
+    - nodes (Dict[int, Node]): словарь узлов (element_number -> Node)
+    - adjacency_matrix (List[List[int]]): матрица смежности
+    - cols, rows: размеры сетки
     """
-    def __init__(self, nodes: Dict[int, Node], adjacency_matrix: list, cols: int, rows: int) -> None:
+
+    def __init__(self, nodes: Dict[int, Node], adjacency_matrix: List[List[int]],
+                 cols: int, rows: int) -> None:
         self.nodes = nodes
         self.adjacency_matrix = adjacency_matrix
         self.cols = cols
         self.rows = rows
+
+    def clone(self) -> "SchemaData":
+        """
+        Создаёт глубокую копию (clone) объекта SchemaData.
+        1) Копируем все узлы (создавая новые объекты Node).
+        2) Копируем матрицу смежности, если предполагается её менять.
+           Иначе можно оставить ссылку, если матрица не будет изменяться.
+        3) cols, rows копируем как есть (примитивные типы).
+        """
+        # Копируем узлы
+        new_nodes = {
+            num: Node(node.element_number, node.grid_position)
+            for num, node in self.nodes.items()
+        }
+        # Копируем матрицу смежности (построчное копирование)
+        new_matrix = [row[:] for row in self.adjacency_matrix]
+        return SchemaData(new_nodes, new_matrix, self.cols, self.rows)

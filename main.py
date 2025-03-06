@@ -4,8 +4,10 @@ main.py
 """
 
 import tkinter as tk
-from tabmanager import TabManager
+
 from globalmenu import GlobalMenu
+from tabmanager import TabManager
+
 
 def main():
     root = tk.Tk()
